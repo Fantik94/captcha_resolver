@@ -3,18 +3,17 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import numpy as np
-import cv2
 from PIL import Image
-import io
+import time
 import os
+import cv2
+import numpy as np
 
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 
 
 class CaptchaSolverSelenium:
-    #Classe pour récupérer un CAPTCHA à partir d'un site web avec Selenium.
+    """Classe pour récupérer un CAPTCHA à partir d'un site web avec Selenium."""
 
     def __init__(self, url, captcha_id="demoCaptcha_CaptchaImage", output_folder="../data/"):
         self.url = url
@@ -22,16 +21,16 @@ class CaptchaSolverSelenium:
         self.output_folder = output_folder
         self.driver = None
 
-        # Créer un dossier data si il existe pas
+        # Créer le dossier ./data/ s'il n'existe pas
         os.makedirs(self.output_folder, exist_ok=True)
 
     def capture_captcha(self):
-        #Capture et sauvegarde le CAPTCHA dans data
+        """Capture et sauvegarde le CAPTCHA dans ./data/"""
         self.driver = webdriver.Chrome()
-        self.driver.get(self.url) #get l'url
+        self.driver.get(self.url)
 
         try:
-            # Attendre le CAPTCHA
+            # Attendre que le CAPTCHA apparaisse
             captcha_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, self.captcha_id))
             )
@@ -42,10 +41,10 @@ class CaptchaSolverSelenium:
             )
 
             # Capturer le CAPTCHA
-            captcha_bytes = captcha_element.screenshot_as_png#capture l'élément en png
-            captcha_path = os.path.join(self.output_folder, "captcha.png") # en registre le captcha dans le data sous le nom cpatcha.png
+            captcha_bytes = captcha_element.screenshot_as_png
+            captcha_path = os.path.join(self.output_folder, "captcha.png")
 
-            # ouvre le fichier en binaire et écrit les données de l'image dedans
+            # Sauvegarder l'image
             with open(captcha_path, "wb") as f:
                 f.write(captcha_bytes)
 
@@ -56,28 +55,52 @@ class CaptchaSolverSelenium:
             print(f"❌ Erreur lors de la capture du CAPTCHA : {e}")
             return None
         
-    #fonction pour fermer le navigateur a la fin
+    # Fonction pour fermer le navigateur proprement
     def close(self):
         if self.driver:
             self.driver.quit()
 
 
 class CaptchaReaderTrOCR:
-    #Classe pour lire un CAPTCHA en utilisant le model TrOCR
+    """Classe pour lire un CAPTCHA en utilisant TrOCR avec sélection automatique du modèle."""
 
     def __init__(self, data_folder="../data/"):
         self.data_folder = data_folder
-        self.processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten", use_fast=True)# Chargement du proco TrOCR pour préparer les images
-        self.model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-handwritten", ignore_mismatched_sizes=True)# chargement modèle TrOCR
+        self.model_type = self.detect_captcha_type()  # Détermine le modèle à utiliser
+        self.processor = TrOCRProcessor.from_pretrained(self.model_type, use_fast=True)
+        self.model = VisionEncoderDecoderModel.from_pretrained(self.model_type, ignore_mismatched_sizes=True)
+
+    def detect_captcha_type(self):
+        """Détecte si un CAPTCHA est segmenté ou manuscrit."""
+        captcha_path = os.path.join(self.data_folder, "captcha.png")
+        image = cv2.imread(captcha_path, cv2.IMREAD_GRAYSCALE)
+
+        if image is None:
+            print("❌ Erreur : Impossible de charger l'image.")
+            return "microsoft/trocr-base-handwritten"  # Par défaut
+
+        # Appliquer un seuillage adaptatif
+        _, thresholded = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        # Détecter les contours
+        contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Vérifier le nombre d’objets détectés
+        if len(contours) > 5:  
+            print("🔹 Type détecté : CAPTCHA segmenté (lettres séparées) → Utilisation de TrOCR Base")
+            return "microsoft/trocr-base-handwritten"
+        else:  
+            print("🔹 Type détecté : CAPTCHA manuscrit (bruité) → Utilisation de TrOCR Large")
+            return "microsoft/trocr-large-handwritten"
 
     def read_captcha(self):
-        #fonction pour lire le CAPTCHA sauvegardé et retourne le texte détecté
+        """Lit le CAPTCHA sauvegardé et retourne le texte détecté."""
         captcha_path = os.path.join(self.data_folder, "captcha.png")
 
         try:
-            image = Image.open(captcha_path).convert("RGB")#ouvre l'image en modifiant le rgb pour une meilleur lecture
+            image = Image.open(captcha_path).convert("RGB")
             pixel_values = self.processor(images=image, return_tensors="pt").pixel_values
-            generated_ids = self.model.generate(pixel_values)# génère du texte prédit par le modèle
+            generated_ids = self.model.generate(pixel_values)
             text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
             print(f"🔍 CAPTCHA détecté : {text}")
@@ -89,21 +112,24 @@ class CaptchaReaderTrOCR:
 
 
 class CaptchaAutomation:
-    #Classe principale pour capturer et résoudre le CAPTCHA automatiquement
+    """Classe principale pour capturer et résoudre le CAPTCHA automatiquement"""
 
     def __init__(self, url):
         self.url = url
-        self.solver = CaptchaSolverSelenium(url, output_folder="../data/")# initialise un solveur de captcha
-        self.reader = CaptchaReaderTrOCR(data_folder="../data/")# initialise un lecteur de captcha
+        self.solver = CaptchaSolverSelenium(url, output_folder="../data/")
+        self.reader = None  # Initialisé après la capture
 
     def solve_captcha(self):
-        #Automatise la capture et la résolution du CAPTCHA
+        """Automatise la capture et la résolution du CAPTCHA"""
         # Capture du CAPTCHA
         captcha_path = self.solver.capture_captcha()
         if not captcha_path:
             print("❌ Impossible de capturer le CAPTCHA.")
             return
 
+        # Initialiser le lecteur avec détection du modèle après la capture
+        self.reader = CaptchaReaderTrOCR(data_folder="../data/")
+        
         # Lecture du CAPTCHA
         captcha_text = self.reader.read_captcha()
         if not captcha_text:
@@ -133,10 +159,3 @@ if __name__ == "__main__":
     URL = "https://captcha.com/demos/features/captcha-demo.aspx"
     bot = CaptchaAutomation(URL)
     bot.solve_captcha()
-
-    # captcha_path = bot.solver.capture_captcha()
-    # captchaReader = bot.reader.read_captcha()
-    # if captchaReader:
-    #     print(f"résultat du captcha : {captchaReader}")
-    # else:
-    #     print("cringe")
