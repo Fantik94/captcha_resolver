@@ -1,12 +1,10 @@
-import React from 'react';
-import Captcha from './Captcha';
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import './index.css'
+import App from './App.jsx'
 
-const App = () => {
-  return (
-    <div>
-      <Captcha />
-    </div>
-  );
-};
-
-export default App;
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+)
