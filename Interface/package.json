@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "captcha-mini": "^1.1.0",
+    "install": "^0.13.0",
+    "npm": "^10.9.2",
     "react": "^19.0.0",
     "react-captcha-code": "^1.0.7",
     "react-dom": "^19.0.0",
