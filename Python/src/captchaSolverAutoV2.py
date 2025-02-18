@@ -161,3 +161,4 @@ if __name__ == "__main__":
     #URL = "http://localhost:3000"
     bot = CaptchaAutomation(URL)
     bot.solve_captcha()
+    #xxxx

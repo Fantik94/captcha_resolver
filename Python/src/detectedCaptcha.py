@@ -34,3 +34,5 @@ if __name__ == "__main__":
 
     image_path = sys.argv[1]
     detect_captcha_type(image_path)
+    
+    #xxxx
