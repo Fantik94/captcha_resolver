@@ -3,12 +3,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-import numpy as np
-import cv2
 from PIL import Image
-import io
+import time
 import os
+# import numpy as np
+# import cv2
+# import io
 
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 
