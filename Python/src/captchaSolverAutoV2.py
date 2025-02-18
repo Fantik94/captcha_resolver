@@ -15,7 +15,7 @@ from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 class CaptchaSolverSelenium:
     """Classe pour récupérer un CAPTCHA à partir d'un site web avec Selenium."""
 
-    def __init__(self, url, captcha_id="demoCaptcha_CaptchaImage", output_folder="../data/"):
+    def __init__(self, url, captcha_id="captcha-img", output_folder="../data/"):
         self.url = url
         self.captcha_id = captcha_id
         self.output_folder = output_folder
@@ -57,6 +57,7 @@ class CaptchaSolverSelenium:
         
     # Fonction pour fermer le navigateur proprement
     def close(self):
+        time.sleep(10)
         if self.driver:
             self.driver.quit()
 
@@ -139,7 +140,7 @@ class CaptchaAutomation:
         # Remplir le champ d'entrée
         try:
             input_field = WebDriverWait(self.solver.driver, 10).until(
-                EC.presence_of_element_located((By.ID, "captchaCode"))
+                EC.presence_of_element_located((By.ID, "captcha-input"))
             )
             input_field.send_keys(captcha_text)
             input_field.send_keys(Keys.RETURN)
