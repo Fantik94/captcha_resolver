@@ -49,9 +49,19 @@ services:
     networks:
       - captcha-network
 
+  captcha-solver:
+    build: ./Python  # 📌 Dossier contenant le Dockerfile Python
+    container_name: captcha-solver-container
+    ports:
+      - "8000:8000"  # 📌 Exposition du port pour FastAPI
+    depends_on:
+      - api  # 📌 S'assure que l'API est lancée avant le solver
+    networks:
+      - captcha-network
+
 volumes:
   mysql_data:
 
 networks:
   captcha-network:
-    driver: bridge 
+    driver: bridge
