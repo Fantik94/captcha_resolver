@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, Typography, Paper, TextField } from '@mui/material';
 import axios from 'axios';
+import { useNotification } from '../context/NotificationContext';
 
 const CaptchaComponent = () => {
   const [captcha, setCaptcha] = useState(null);
   const [userInput, setUserInput] = useState('');
-  const [message, setMessage] = useState('');
+  const { notifySuccess, notifyError } = useNotification();
 
   const fetchCaptcha = async () => {
     try {
       const response = await axios.get('http://localhost:3001/api/captcha');
       setCaptcha(response.data);
     } catch (error) {
-      setMessage('Erreur lors de la récupération du captcha.');
+      notifyError('Erreur lors de la récupération du captcha.');
     }
   };
 
@@ -23,18 +24,26 @@ const CaptchaComponent = () => {
   const refreshCaptcha = () => {
     fetchCaptcha();
     setUserInput('');
-    setMessage('');
   };
 
   const handleInputChange = (e) => {
     setUserInput(e.target.value);
   };
 
-  const handleVerify = () => {
-    if (userInput === captcha.value) {
-      setMessage('Captcha validé avec succès !');
-    } else {
-      setMessage('Captcha incorrect, veuillez réessayer.');
+  const handleVerify = async () => {
+    try {
+      const response = await axios.post('http://localhost:3001/api/submit-captcha', {
+        id: captcha.id,
+        userInput: userInput
+      });
+
+      if (response.data.valid) {
+        notifySuccess('Captcha validé avec succès !');
+      } else {
+        notifyError('Captcha incorrect, veuillez réessayer.');
+      }
+    } catch (error) {
+      notifyError('Erreur lors de la vérification du captcha.');
     }
 
     // Rafraîchir le CAPTCHA après 500 ms
@@ -84,9 +93,6 @@ const CaptchaComponent = () => {
           >
             <img id="captcha-img" src={captcha.imageUrl} alt="Captcha" />
           </Box>
-          <Typography variant="body2" sx={{ color: '#3f51b5', marginBottom: '1.5rem' }}>
-            <strong>Valeur réelle du captcha :</strong> {captcha.value}
-          </Typography>
           <TextField 
             fullWidth
             variant="outlined"
@@ -108,28 +114,9 @@ const CaptchaComponent = () => {
         </>
       ) : (
         <Typography variant="body1" color="error.main">
-          {message || 'Chargement du captcha...'}
+          Chargement du captcha...
         </Typography>
       )}
-
-      {message && (
-        <Typography
-          variant="body1"
-          color={message.includes('succès') ? 'success.main' : 'error.main'}
-          sx={{ marginTop: '1.5rem', fontWeight: 'bold' }}
-        >
-          {message}
-        </Typography>
-      )}
-
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={refreshCaptcha}
-        sx={{ width: '100%', padding: '1rem', backgroundColor: '#3f51b5' }}
-      >
-        Rafraîchir
-      </Button>
     </Paper>
   );
 };

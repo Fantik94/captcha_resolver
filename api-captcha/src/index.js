@@ -69,6 +69,42 @@ app.post('/api/verify-captcha', async (req, res) => {
   }
 });
 
+// Route pour soumettre et vérifier un captcha
+app.post('/api/submit-captcha', async (req, res) => {
+  const { id, userInput } = req.body;
+
+  try {
+    const connection = await pool.getConnection();
+
+    // Récupérer la valeur réelle du captcha
+    const [captchaRows] = await connection.query(
+      'SELECT value FROM captchas_bruite WHERE id = ? UNION SELECT value FROM captchas_segmented WHERE id = ?',
+      [id, id]
+    );
+
+    if (captchaRows.length === 0) {
+      connection.release();
+      return res.status(404).json({ message: 'Captcha non trouvé' });
+    }
+
+    const expectedValue = captchaRows[0].value;
+    const status = userInput === expectedValue ? 'verified' : 'failed';
+
+    // Insérer la soumission dans la base de données
+    await connection.query(
+      'INSERT INTO captcha_verifications (captcha_id, received_value, status, created_at) VALUES (?, ?, ?, NOW())',
+      [id, userInput, status]
+    );
+
+    connection.release();
+
+    res.json({ valid: status === 'verified' });
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Serveur démarré sur le port ${port}`);
 }); 
