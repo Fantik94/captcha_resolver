@@ -25,17 +25,28 @@ class CaptchaSolverSelenium:
         os.makedirs(self.output_folder, exist_ok=True)
 
     def capture_captcha(self):
-        """Capture et sauvegarde le CAPTCHA dans ./data/"""
-        self.driver = webdriver.Chrome()
-        self.driver.get(self.url)
+        """Capture et sauvegarde le CAPTCHA dans ./data/ sans ouvrir une nouvelle page"""
+        
+        # Utiliser une session Chrome existante
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.add_argument("--headless")  # Mode sans interface graphique
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920x1080")
+        chrome_options.add_argument("--remote-debugging-port=9222")  # Permet de se connecter à une session existante
+
+        # Démarrer WebDriver
+        self.driver = webdriver.Chrome(options=chrome_options)
 
         try:
+            # Se connecter à une page déjà ouverte au lieu d'en ouvrir une nouvelle
+            self.driver.execute_script("window.focus();")  # 🔥 Garde l'onglet actif
+
             # Attendre que le CAPTCHA apparaisse
             captcha_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, self.captcha_id))
             )
 
-            # Vérifier que l'élément a une taille correcte
+            # Vérifier la taille de l'élément
             WebDriverWait(self.driver, 10).until(
                 lambda d: captcha_element.size["width"] > 10 and captcha_element.size["height"] > 10
             )
@@ -156,9 +167,7 @@ class CaptchaAutomation:
             self.solver.close()
 
 
-if __name__ == "__main__":
-    #URL = "https://captcha.com/demos/features/captcha-demo.aspx"
-    URL = "http://localhost:3000"
-    bot = CaptchaAutomation(URL)
-    bot.solve_captcha()
-    #xxxx
+# if __name__ == "__main__":
+    # URL = "http://localhost:3000"
+    # bot = CaptchaAutomation(URL)
+    # bot.solve_captcha()
