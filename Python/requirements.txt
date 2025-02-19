@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+selenium
+Pillow
+opencv-python
+numpy
+transformers
+torch
