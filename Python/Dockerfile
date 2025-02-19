@@ -5,8 +5,12 @@ FROM python:3.9
 RUN apt-get update && apt-get install -y \
     python3 python3-pip \
     libgl1-mesa-glx libglib2.0-0 \
-    wget unzip curl \
-    google-chrome-stable
+    wget unzip curl
+
+# Ajouter le dépôt officiel de Google Chrome et l’installer
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
+    apt-get update && apt-get install -y google-chrome-stable
 
 # Récupérer la version de Chrome installée
 RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}') && \
