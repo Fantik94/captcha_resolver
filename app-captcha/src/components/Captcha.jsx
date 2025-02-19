@@ -36,6 +36,17 @@ const CaptchaComponent = () => {
     } else {
       setMessage('Captcha incorrect, veuillez réessayer.');
     }
+
+    // Rafraîchir le CAPTCHA après 500 ms
+    setTimeout(() => {
+      refreshCaptcha();
+    }, 500);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleVerify();
+    }
   };
 
   return (
@@ -76,13 +87,15 @@ const CaptchaComponent = () => {
           <Typography variant="body2" sx={{ color: '#3f51b5', marginBottom: '1.5rem' }}>
             <strong>Valeur réelle du captcha :</strong> {captcha.value}
           </Typography>
-          <TextField id="captcha-input"
+          <TextField 
             fullWidth
             variant="outlined"
             placeholder="Entrez le code captcha"
             value={userInput}
             onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
             sx={{ marginBottom: '1.5rem' }}
+            id="captcha-input"
           />
           <Button id="captcha-verif"
             variant="contained"

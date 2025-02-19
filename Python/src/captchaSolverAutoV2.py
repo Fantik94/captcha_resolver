@@ -157,8 +157,8 @@ class CaptchaAutomation:
 
 
 if __name__ == "__main__":
-    URL = "https://captcha.com/demos/features/captcha-demo.aspx"
-    #URL = "http://localhost:3000"
+    #URL = "https://captcha.com/demos/features/captcha-demo.aspx"
+    URL = "http://localhost:3000"
     bot = CaptchaAutomation(URL)
     bot.solve_captcha()
     #xxxx
