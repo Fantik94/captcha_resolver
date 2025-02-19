@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import threading
 from pydantic import BaseModel
-from src.captchaSolverAutoV2 import CaptchaAutomation
+from captchaSolverAutoV2 import CaptchaAutomation
 
 # Création de l'API FastAPI
 app = FastAPI()
