@@ -60,7 +60,12 @@ const CaptchaComponent = () => {
 
   const handleRunPythonScript = async () => {
     try {
-      const response = await axios.post('http://localhost:3001/api/run-python-script');
+      const response = await axios.post('http://localhost:8000/solve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: "http://localhost:3000" })
+      });
+      
       console.log('Python script output:', response.data.output);
       notifySuccess('Script Python exécuté avec succès');
     } catch (error) {

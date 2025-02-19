@@ -130,10 +130,15 @@ app.post('/api/submit-captcha', async (req, res) => {
 // Route pour exécuter le script Python
 app.post('/api/run-python-script', async (req, res) => {
   try {
-    const response = await fetch('http://localhost:8000/solve', {  // ✅ L'API Python est appelée ici
+    const response = await fetch('http://localhost:8000/solve', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: "http://localhost:3000" })
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const data = await response.json();
     res.json(data);
