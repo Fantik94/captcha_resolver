@@ -129,7 +129,7 @@ app.post('/api/submit-captcha', async (req, res) => {
 // Route pour exécuter le script Python
 app.post('/api/run-python-script', (req, res) => {
   // Construisez le chemin vers le script Python dans le répertoire src
-  const pythonScriptPath = path.join(__dirname, '..', '..', 'Python', 'src', 'captchaSolverAutoV2.py').replace(/\\/g, '/');
+  const pythonScriptPath = path.join(__dirname, 'src', 'captchaSolverAutoV2.py').replace(/\\/g, '/');
 
   // Vérifiez si le fichier existe
   if (!fs.existsSync(pythonScriptPath)) {
