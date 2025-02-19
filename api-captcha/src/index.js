@@ -152,10 +152,8 @@ app.post('/api/run-python-script', (req, res) => {
 app.get('/api/stats', async (req, res) => {
   try {
     const connection = await pool.getConnection();
-    
-    // paramètres de période (par défaut: 30 derniers jours)
-    const period = req.query.period || '30'; // jours
-    const groupBy = req.query.groupBy || 'day'; // 'day', 'week', 'month'
+    const period = req.query.period || '30';
+    const groupBy = req.query.groupBy || 'day';
 
     // Ccréation d'une série temporelle complète
     let groupByClause, dateFormat;
@@ -173,7 +171,7 @@ app.get('/api/stats', async (req, res) => {
         dateFormat = 'DATE(created_at)';
     }
 
-    // statistiques temporelles avec gestion des périodes sans données
+    // Statistiques temporelles modifiées
     const [timeStats] = await connection.query(`
       WITH RECURSIVE date_series AS (
         SELECT CURDATE() - INTERVAL ${period} DAY as date
@@ -187,7 +185,7 @@ app.get('/api/stats', async (req, res) => {
           ${dateFormat} as date,
           COUNT(*) as attempts,
           SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as success,
-          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+          SUM(CASE WHEN status != 'verified' THEN 1 ELSE 0 END) as failed,
           captcha_type
         FROM captcha_verifications
         WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
@@ -208,28 +206,52 @@ app.get('/api/stats', async (req, res) => {
       ORDER BY ds.date DESC
     `);
 
-    // autres statistiques existantes...
+    // Statistiques globales modifiées
     const [globalStats] = await connection.query(`
       SELECT 
         COUNT(*) as total_attempts,
         SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as total_success,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as total_failed,
+        SUM(CASE WHEN status != 'verified' THEN 1 ELSE 0 END) as total_failed,
         (SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) / COUNT(*) * 100) as success_rate
       FROM captcha_verifications
       WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
     `);
 
-    // stats par type de CAPTCHA
+    // Stats par type modifiées
     const [typeStats] = await connection.query(`
       SELECT 
         captcha_type,
         COUNT(*) as attempts,
         SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as success,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN status != 'verified' THEN 1 ELSE 0 END) as failed,
         (SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) / COUNT(*) * 100) as success_rate
       FROM captcha_verifications
       WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
       GROUP BY captcha_type
+    `);
+
+    // Nouvelles statistiques par statut
+    const [statusStats] = await connection.query(`
+      SELECT 
+        status,
+        COUNT(*) as count,
+        (COUNT(*) / SUM(COUNT(*)) OVER() * 100) as percentage
+      FROM captcha_verifications
+      WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
+      GROUP BY status
+    `);
+
+    // Statistiques horaires
+    const [hourlyStats] = await connection.query(`
+      SELECT 
+        HOUR(created_at) as hour,
+        COUNT(*) as attempts,
+        SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as success,
+        SUM(CASE WHEN status != 'verified' THEN 1 ELSE 0 END) as failed
+      FROM captcha_verifications
+      WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
+      GROUP BY HOUR(created_at)
+      ORDER BY hour
     `);
 
     connection.release();
@@ -238,6 +260,8 @@ app.get('/api/stats', async (req, res) => {
       global: globalStats[0],
       byType: typeStats,
       timeStats: timeStats,
+      statusStats: statusStats,
+      hourlyStats: hourlyStats,
       period: {
         days: parseInt(period),
         groupBy: groupBy
