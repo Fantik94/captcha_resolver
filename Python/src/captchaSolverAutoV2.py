@@ -57,7 +57,6 @@ class CaptchaSolverSelenium:
         
     # Fonction pour fermer le navigateur proprement
     def close(self):
-        time.sleep(10)
         if self.driver:
             self.driver.quit()
 
@@ -143,6 +142,7 @@ class CaptchaAutomation:
                 EC.presence_of_element_located((By.ID, "captcha-input"))
             )
             input_field.send_keys(captcha_text)
+            time.sleep(3)
             input_field.send_keys(Keys.RETURN)
 
             print("✅ CAPTCHA soumis avec succès.")
@@ -152,7 +152,7 @@ class CaptchaAutomation:
             print(f"❌ Erreur lors de la soumission du CAPTCHA : {e}")
 
         finally:
-            time.sleep(10)
+            time.sleep(5)
             self.solver.close()
 
 
