@@ -76,19 +76,31 @@ app.post('/api/submit-captcha', async (req, res) => {
   try {
     const connection = await pool.getConnection();
 
-    // Récupérer la valeur réelle du captcha et son type
-    const [captchaRows] = await connection.query(
-      'SELECT value, "bruite" as type FROM captchas_bruite WHERE id = ? UNION SELECT value, "segmented" as type FROM captchas_segmented WHERE id = ?',
-      [id, id]
+    // Vérifier d'abord dans la table bruite
+    let [bruteResults] = await connection.query(
+      'SELECT id, value FROM captchas_bruite WHERE id = ?',
+      [id]
     );
 
-    if (captchaRows.length === 0) {
+    let captchaType = 'bruite';
+    let captchaRow = bruteResults[0];
+
+    // Si pas trouvé dans bruite, chercher dans segmented
+    if (!captchaRow) {
+      [bruteResults] = await connection.query(
+        'SELECT id, value FROM captchas_segmented WHERE id = ?',
+        [id]
+      );
+      captchaRow = bruteResults[0];
+      captchaType = 'segmented';
+    }
+
+    if (!captchaRow) {
       connection.release();
       return res.status(404).json({ message: 'Captcha non trouvé' });
     }
 
-    const expectedValue = captchaRows[0].value;
-    const captchaType = captchaRows[0].type;
+    const expectedValue = captchaRow.value;
     const status = userInput === expectedValue ? 'verified' : 'failed';
 
     // Insérer la soumission dans la base de données
@@ -98,8 +110,8 @@ app.post('/api/submit-captcha', async (req, res) => {
     );
 
     connection.release();
-
     res.json({ valid: status === 'verified' });
+
   } catch (error) {
     console.error('Erreur:', error);
     res.status(500).json({ message: 'Erreur serveur' });

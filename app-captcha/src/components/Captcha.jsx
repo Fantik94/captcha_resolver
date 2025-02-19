@@ -96,6 +96,9 @@ const CaptchaComponent = () => {
           <Typography variant="body2" sx={{ color: '#3f51b5', marginBottom: '1.5rem' }}>
             <strong>Valeur réelle du captcha :</strong> {captcha.value}
           </Typography>
+          <Typography variant="body2" sx={{ color: '#3f51b5', marginBottom: '1.5rem' }}>
+            <strong>Type de captcha :</strong> {captcha.type}
+          </Typography>
           <TextField 
             fullWidth
             variant="outlined"
@@ -113,6 +116,14 @@ const CaptchaComponent = () => {
             sx={{ width: '100%', padding: '1rem', backgroundColor: '#3f51b5', marginBottom: '1rem' }}
           >
             Vérifier
+          </Button>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={refreshCaptcha}
+            sx={{ width: '100%', padding: '1rem', marginTop: '1rem' }}
+          >
+            Rafraîchir
           </Button>
         </>
       ) : (
