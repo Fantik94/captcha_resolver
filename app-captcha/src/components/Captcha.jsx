@@ -133,7 +133,12 @@ const CaptchaComponent = () => {
 
   const handleRunPythonScript = async () => {
     try {
-      const response = await axios.post('http://localhost:3001/api/run-python-script');
+      const response = await axios.post('http://localhost:8000/solve', {
+        url: "http://localhost:3000"
+      }, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+
       console.log('Python script output:', response.data.output);
       notifySuccess('Script Python exécuté avec succès');
     } catch (error) {
@@ -141,6 +146,7 @@ const CaptchaComponent = () => {
       notifyError('Erreur lors de l\'exécution du script Python');
     }
   };
+
 
   return (
     <StyledPaper elevation={0}>
@@ -228,7 +234,7 @@ const CaptchaComponent = () => {
                   onClick={handleRunPythonScript}
                   startIcon={<CodeIcon />}
                 >
-                  Exécuter Script
+                  Exécuter le Script Python
                 </ActionButton>
               </Box>
             </Box>
