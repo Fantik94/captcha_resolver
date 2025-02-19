@@ -93,6 +93,9 @@ const CaptchaComponent = () => {
           >
             <img id="captcha-img" src={captcha.imageUrl} alt="Captcha" />
           </Box>
+          <Typography variant="body2" sx={{ color: '#3f51b5', marginBottom: '1.5rem' }}>
+            <strong>Valeur réelle du captcha :</strong> {captcha.value}
+          </Typography>
           <TextField 
             fullWidth
             variant="outlined"
