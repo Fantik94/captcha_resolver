@@ -148,6 +148,108 @@ app.post('/api/run-python-script', (req, res) => {
   });
 });
 
+
+app.get('/api/stats', async (req, res) => {
+  try {
+    const connection = await pool.getConnection();
+    
+    // paramètres de période (par défaut: 30 derniers jours)
+    const period = req.query.period || '30'; // jours
+    const groupBy = req.query.groupBy || 'day'; // 'day', 'week', 'month'
+
+    // Ccréation d'une série temporelle complète
+    let groupByClause, dateFormat;
+    switch(groupBy) {
+      case 'week':
+        groupByClause = 'YEARWEEK(created_at)';
+        dateFormat = 'DATE(DATE_ADD(created_at, INTERVAL(1-DAYOFWEEK(created_at)) DAY))';
+        break;
+      case 'month':
+        groupByClause = 'DATE_FORMAT(created_at, "%Y-%m")';
+        dateFormat = 'DATE_FORMAT(created_at, "%Y-%m-01")';
+        break;
+      default: // day
+        groupByClause = 'DATE(created_at)';
+        dateFormat = 'DATE(created_at)';
+    }
+
+    // statistiques temporelles avec gestion des périodes sans données
+    const [timeStats] = await connection.query(`
+      WITH RECURSIVE date_series AS (
+        SELECT CURDATE() - INTERVAL ${period} DAY as date
+        UNION ALL
+        SELECT date + INTERVAL 1 DAY
+        FROM date_series
+        WHERE date < CURDATE()
+      ),
+      daily_stats AS (
+        SELECT 
+          ${dateFormat} as date,
+          COUNT(*) as attempts,
+          SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as success,
+          SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+          captcha_type
+        FROM captcha_verifications
+        WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
+        GROUP BY ${groupByClause}, captcha_type
+      )
+      SELECT 
+        ds.date,
+        COALESCE(s.attempts, 0) as attempts,
+        COALESCE(s.success, 0) as success,
+        COALESCE(s.failed, 0) as failed,
+        COALESCE(s.captcha_type, 'all') as type,
+        CASE 
+          WHEN s.attempts > 0 THEN (s.success / s.attempts * 100)
+          ELSE 0 
+        END as success_rate
+      FROM date_series ds
+      LEFT JOIN daily_stats s ON ds.date = s.date
+      ORDER BY ds.date DESC
+    `);
+
+    // autres statistiques existantes...
+    const [globalStats] = await connection.query(`
+      SELECT 
+        COUNT(*) as total_attempts,
+        SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as total_success,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as total_failed,
+        (SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) / COUNT(*) * 100) as success_rate
+      FROM captcha_verifications
+      WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
+    `);
+
+    // stats par type de CAPTCHA
+    const [typeStats] = await connection.query(`
+      SELECT 
+        captcha_type,
+        COUNT(*) as attempts,
+        SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) as success,
+        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed,
+        (SUM(CASE WHEN status = 'verified' THEN 1 ELSE 0 END) / COUNT(*) * 100) as success_rate
+      FROM captcha_verifications
+      WHERE created_at >= CURDATE() - INTERVAL ${period} DAY
+      GROUP BY captcha_type
+    `);
+
+    connection.release();
+
+    res.json({
+      global: globalStats[0],
+      byType: typeStats,
+      timeStats: timeStats,
+      period: {
+        days: parseInt(period),
+        groupBy: groupBy
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Serveur démarré sur le port ${port}`);
 }); 
