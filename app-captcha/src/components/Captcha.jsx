@@ -58,6 +58,16 @@ const CaptchaComponent = () => {
     }
   };
 
+  const handleRunPythonScript = async () => {
+    try {
+      const response = await axios.post('http://localhost:3001/api/run-python-script');
+      console.log('Python script output:', response.data.output);
+      // Vous pouvez traiter la réponse ici si nécessaire
+    } catch (error) {
+      console.error('Error running Python script:', error);
+    }
+  };
+
   return (
     <Paper
       elevation={4}
@@ -131,6 +141,33 @@ const CaptchaComponent = () => {
           Chargement du captcha...
         </Typography>
       )}
+
+      {message && (
+        <Typography
+          variant="body1"
+          color={message.includes('succès') ? 'success.main' : 'error.main'}
+          sx={{ marginTop: '1.5rem', fontWeight: 'bold' }}
+        >
+          {message}
+        </Typography>
+      )}
+
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={refreshCaptcha}
+        sx={{ width: '100%', padding: '1rem', backgroundColor: '#3f51b5' }}
+      >
+        Rafraîchir
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={handleRunPythonScript}
+        sx={{ width: '100%', padding: '1rem', backgroundColor: '#f50057', marginTop: '1rem' }}
+      >
+        Exécuter le Script Python
+      </Button>
     </Paper>
   );
 };
