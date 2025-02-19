@@ -1,22 +1,21 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from PIL import Image
 import time
 import os
 import cv2
-import numpy as np
 
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 
 
 class CaptchaSolverSelenium:
-    """Classe pour récupérer un CAPTCHA à partir d'un site web avec Selenium."""
+    """Classe pour récupérer un CAPTCHA à partir d'un site web déjà ouvert."""
 
-    def __init__(self, url, captcha_id="captcha-img", output_folder="../data/"):
-        self.url = url
+    def __init__(self, captcha_id="captcha-img", output_folder="../data/"):
         self.captcha_id = captcha_id
         self.output_folder = output_folder
         self.driver = None
@@ -24,22 +23,21 @@ class CaptchaSolverSelenium:
         # Créer le dossier ./data/ s'il n'existe pas
         os.makedirs(self.output_folder, exist_ok=True)
 
-    def capture_captcha(self):
-        """Capture et sauvegarde le CAPTCHA dans ./data/ sans ouvrir une nouvelle page"""
-        
-        # Utiliser une session Chrome existante
+    def connect_to_existing_chrome(self):
+        """Se connecte à Chrome déjà ouvert"""
         chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--headless")  # Mode sans interface graphique
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920x1080")
-        chrome_options.add_argument("--remote-debugging-port=9222")  # Permet de se connecter à une session existante
+        chrome_options.debugger_address = "localhost:9222"  # 🔥 Se connecte à Chrome déjà ouvert
 
-        # Démarrer WebDriver
         self.driver = webdriver.Chrome(options=chrome_options)
 
+    def capture_captcha(self):
+        """Capture et sauvegarde le CAPTCHA sans recharger la page"""
         try:
-            # Se connecter à une page déjà ouverte au lieu d'en ouvrir une nouvelle
-            self.driver.execute_script("window.focus();")  # 🔥 Garde l'onglet actif
+            if not self.driver:
+                self.connect_to_existing_chrome()
+
+            # 🔥 Se connecter à la page déjà ouverte sans la recharger
+            self.driver.execute_script("window.focus();")
 
             # Attendre que le CAPTCHA apparaisse
             captcha_element = WebDriverWait(self.driver, 10).until(
