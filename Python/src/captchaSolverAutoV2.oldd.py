@@ -1,21 +1,24 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import time
 import os
 import cv2
+import numpy as np
 
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 
 
 class CaptchaSolverSelenium:
-    """Classe pour récupérer un CAPTCHA à partir d'un site web déjà ouvert."""
+    """Classe pour récupérer un CAPTCHA à partir d'un site web avec Selenium."""
 
-    def __init__(self, captcha_id="captcha-img", output_folder="../data/"):
+    def __init__(self, url, captcha_id="captcha-img", output_folder="../data/"):
+        self.url = url
         self.captcha_id = captcha_id
         self.output_folder = output_folder
         self.driver = None
@@ -23,31 +26,34 @@ class CaptchaSolverSelenium:
         # Créer le dossier ./data/ s'il n'existe pas
         os.makedirs(self.output_folder, exist_ok=True)
 
-    def connect_to_existing_chrome(self):
-        """Se connecte à Chrome déjà ouvert"""
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.debugger_address = "localhost:9222"  # 🔥 Se connecte à Chrome déjà ouvert
-
-        self.driver = webdriver.Chrome(options=chrome_options)
-
     def capture_captcha(self):
-        """Capture et sauvegarde le CAPTCHA sans recharger la page"""
-        try:
-            if not self.driver:
-                self.connect_to_existing_chrome()
+        """Capture et sauvegarde le CAPTCHA dans ./data/"""
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # ✅ Mode sans interface graphique
+        chrome_options.add_argument("--no-sandbox")  # ✅ Évite les problèmes de permission dans Docker
+        chrome_options.add_argument("--disable-dev-shm-usage")  # ✅ Empêche Chrome de se bloquer par manque de mémoire
+        chrome_options.add_argument("--remote-debugging-port=9222")  # ✅ Pour debug si nécessaire
+        chrome_options.add_argument("--disable-gpu")  # ✅ Accélère l'exécution sans GPU
+        chrome_options.add_argument("--window-size=1920,1080")  # ✅ Simule un écran normal pour éviter des bugs
 
-            # 🔥 Se connecter à la page déjà ouverte sans la recharger
-            self.driver.execute_script("window.focus();")
+        # Lancer ChromeDriver avec les options en mode headless
+        self.driver = webdriver.Chrome(options=chrome_options)
+        self.driver.get(self.url)
+
+        try:
+            print("✅ Page chargée :", self.driver.title)  # 🔥 Debug : Vérifie que la page est bien chargée
 
             # Attendre que le CAPTCHA apparaisse
             captcha_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, self.captcha_id))
             )
 
-            # Vérifier la taille de l'élément
+            # Vérifier que l'élément a une taille correcte
             WebDriverWait(self.driver, 10).until(
                 lambda d: captcha_element.size["width"] > 10 and captcha_element.size["height"] > 10
             )
+
+            print("✅ CAPTCHA détecté :", captcha_element.is_displayed())  # 🔥 Debug : Vérifie que l’élément est trouvé
 
             # Capturer le CAPTCHA
             captcha_bytes = captcha_element.screenshot_as_png
@@ -165,7 +171,8 @@ class CaptchaAutomation:
             self.solver.close()
 
 
-# if __name__ == "__main__":
-    # URL = "http://localhost:3000"
-    # bot = CaptchaAutomation(URL)
-    # bot.solve_captcha()
+if __name__ == "__main__":
+    # URL du site où est le CAPTCHA
+    URL = "http://localhost:3000"
+    bot = CaptchaAutomation(URL)
+    bot.solve_captcha()

@@ -54,4 +54,4 @@ volumes:
 
 networks:
   captcha-network:
-    driver: bridge 
+    driver: bridge
