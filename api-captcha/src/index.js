@@ -6,6 +6,7 @@ import { exec } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { log } from 'console';
 
 dotenv.config();
 
@@ -127,25 +128,20 @@ app.post('/api/submit-captcha', async (req, res) => {
 });
 
 // Route pour exécuter le script Python
-app.post('/api/run-python-script', (req, res) => {
-  // Construisez le chemin vers le script Python dans le répertoire src
-  const pythonScriptPath = path.join(__dirname, 'src', 'captchaSolverAutoV2.py').replace(/\\/g, '/');
+app.post('/api/run-python-script', async (req, res) => {
+  try {
+    const response = await fetch('http://captcha-solver:8000/solve', {  // ✅ L'API Python est appelée ici
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: "http://frontend:3000" }) // ✅ Optionnel : URL du front
+    });
 
-  // Vérifiez si le fichier existe
-  if (!fs.existsSync(pythonScriptPath)) {
-    return res.status(404).json({ message: 'Script Python non trouvé' });
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Erreur lors de l’appel à l’API Python:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
   }
-
-  console.log('Executing script at path:', pythonScriptPath);
-
-  exec(`python ${pythonScriptPath}`, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error executing Python script: ${error}`);
-      return res.status(500).json({ message: 'Error executing Python script' });
-    }
-    console.log(`Python script output: ${stdout}`);
-    res.json({ output: stdout });
-  });
 });
 
 app.listen(port, () => {
