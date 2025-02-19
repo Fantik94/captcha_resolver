@@ -5,17 +5,14 @@ FROM python:3.9
 RUN apt-get update && apt-get install -y \
     python3 python3-pip \
     libgl1-mesa-glx libglib2.0-0 \
-    wget unzip curl
+    wget unzip curl \
+    google-chrome-stable
 
-# Installer Google Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y google-chrome-stable
-
-# Installer ChromeDriver
-RUN CHROME_DRIVER_VERSION=$(curl -sS https://chromedriver.storage.googleapis.com/LATEST_RELEASE) && \
-    wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/$CHROME_DRIVER_VERSION/chromedriver_linux64.zip && \
+# Récupérer la version de Chrome installée
+RUN CHROME_VERSION=$(google-chrome --version | awk '{print $3}') && \
+    echo "Installed Chrome version: $CHROME_VERSION" && \
+    CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION") && \
+    wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip" && \
     unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
     rm /tmp/chromedriver.zip
 
