@@ -2,6 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -21,6 +25,10 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0
 });
+
+// Obtenez le chemin du répertoire actuel
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Route pour obtenir un captcha aléatoire
 app.get('/api/captcha', async (req, res) => {
@@ -116,6 +124,28 @@ app.post('/api/submit-captcha', async (req, res) => {
     console.error('Erreur:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
+});
+
+// Route pour exécuter le script Python
+app.post('/api/run-python-script', (req, res) => {
+  // Construisez le chemin vers le script Python dans le répertoire src
+  const pythonScriptPath = path.join(__dirname, '..', '..', 'Python', 'src', 'captchaSolverAutoV2.py').replace(/\\/g, '/');
+
+  // Vérifiez si le fichier existe
+  if (!fs.existsSync(pythonScriptPath)) {
+    return res.status(404).json({ message: 'Script Python non trouvé' });
+  }
+
+  console.log('Executing script at path:', pythonScriptPath);
+
+  exec(`python ${pythonScriptPath}`, (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error executing Python script: ${error}`);
+      return res.status(500).json({ message: 'Error executing Python script' });
+    }
+    console.log(`Python script output: ${stdout}`);
+    res.json({ output: stdout });
+  });
 });
 
 app.listen(port, () => {

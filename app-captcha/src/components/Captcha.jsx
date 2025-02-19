@@ -58,6 +58,17 @@ const CaptchaComponent = () => {
     }
   };
 
+  const handleRunPythonScript = async () => {
+    try {
+      const response = await axios.post('http://localhost:3001/api/run-python-script');
+      console.log('Python script output:', response.data.output);
+      notifySuccess('Script Python exécuté avec succès');
+    } catch (error) {
+      console.error('Error running Python script:', error);
+      notifyError('Erreur lors de l\'exécution du script Python');
+    }
+  };
+
   return (
     <Paper
       elevation={4}
@@ -121,9 +132,17 @@ const CaptchaComponent = () => {
             variant="outlined"
             color="secondary"
             onClick={refreshCaptcha}
-            sx={{ width: '100%', padding: '1rem', marginTop: '1rem' }}
+            sx={{ width: '100%', padding: '1rem' }}
           >
             Rafraîchir
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={handleRunPythonScript}
+            sx={{ width: '100%', padding: '1rem', backgroundColor: '#f50057', marginTop: '1rem' }}
+          >
+            Exécuter le Script Python
           </Button>
         </>
       ) : (
