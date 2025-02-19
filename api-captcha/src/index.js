@@ -2,11 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import { exec } from 'child_process';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { log } from 'console';
 
 dotenv.config();
 
@@ -123,27 +120,6 @@ app.post('/api/submit-captcha', async (req, res) => {
 
   } catch (error) {
     console.error('Erreur:', error);
-    res.status(500).json({ message: 'Erreur serveur' });
-  }
-});
-
-// Route pour exécuter le script Python
-app.post('/api/run-python-script', async (req, res) => {
-  try {
-    const response = await fetch('http://localhost:8000/solve', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: "http://localhost:3000" })
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    console.error('Erreur lors de l’appel à l’API Python:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });

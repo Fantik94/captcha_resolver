@@ -61,11 +61,11 @@ const CaptchaComponent = () => {
   const handleRunPythonScript = async () => {
     try {
       const response = await axios.post('http://localhost:8000/solve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: "http://localhost:3000" })
+        url: "http://localhost:3000"
+      }, {
+        headers: { 'Content-Type': 'application/json' }
       });
-      
+
       console.log('Python script output:', response.data.output);
       notifySuccess('Script Python exécuté avec succès');
     } catch (error) {
@@ -73,6 +73,7 @@ const CaptchaComponent = () => {
       notifyError('Erreur lors de l\'exécution du script Python');
     }
   };
+
 
   return (
     <Paper
@@ -115,7 +116,7 @@ const CaptchaComponent = () => {
           <Typography variant="body2" sx={{ color: '#3f51b5', marginBottom: '1.5rem' }}>
             <strong>Type de captcha :</strong> {captcha.type}
           </Typography>
-          <TextField 
+          <TextField
             fullWidth
             variant="outlined"
             placeholder="Entrez le code captcha"
