@@ -76,9 +76,9 @@ app.post('/api/submit-captcha', async (req, res) => {
   try {
     const connection = await pool.getConnection();
 
-    // Récupérer la valeur réelle du captcha
+    // Récupérer la valeur réelle du captcha et son type
     const [captchaRows] = await connection.query(
-      'SELECT value FROM captchas_bruite WHERE id = ? UNION SELECT value FROM captchas_segmented WHERE id = ?',
+      'SELECT value, "bruite" as type FROM captchas_bruite WHERE id = ? UNION SELECT value, "segmented" as type FROM captchas_segmented WHERE id = ?',
       [id, id]
     );
 
@@ -88,12 +88,13 @@ app.post('/api/submit-captcha', async (req, res) => {
     }
 
     const expectedValue = captchaRows[0].value;
+    const captchaType = captchaRows[0].type;
     const status = userInput === expectedValue ? 'verified' : 'failed';
 
     // Insérer la soumission dans la base de données
     await connection.query(
-      'INSERT INTO captcha_verifications (captcha_id, received_value, status, created_at) VALUES (?, ?, ?, NOW())',
-      [id, userInput, status]
+      'INSERT INTO captcha_verifications (captcha_id, captcha_type, received_value, status, created_at) VALUES (?, ?, ?, ?, NOW())',
+      [id, captchaType, userInput, status]
     );
 
     connection.release();
