@@ -3,6 +3,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import time
 import os
@@ -26,10 +28,21 @@ class CaptchaSolverSelenium:
 
     def capture_captcha(self):
         """Capture et sauvegarde le CAPTCHA dans ./data/"""
-        self.driver = webdriver.Chrome()
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")  # ✅ Mode sans interface graphique
+        chrome_options.add_argument("--no-sandbox")  # ✅ Évite les problèmes de permission dans Docker
+        chrome_options.add_argument("--disable-dev-shm-usage")  # ✅ Empêche Chrome de se bloquer par manque de mémoire
+        chrome_options.add_argument("--remote-debugging-port=9222")  # ✅ Pour debug si nécessaire
+        chrome_options.add_argument("--disable-gpu")  # ✅ Accélère l'exécution sans GPU
+        chrome_options.add_argument("--window-size=1920,1080")  # ✅ Simule un écran normal pour éviter des bugs
+
+        # Lancer ChromeDriver avec les options en mode headless
+        self.driver = webdriver.Chrome(options=chrome_options)
         self.driver.get(self.url)
 
         try:
+            print("✅ Page chargée :", self.driver.title)  # 🔥 Debug : Vérifie que la page est bien chargée
+
             # Attendre que le CAPTCHA apparaisse
             captcha_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, self.captcha_id))
@@ -39,6 +52,8 @@ class CaptchaSolverSelenium:
             WebDriverWait(self.driver, 10).until(
                 lambda d: captcha_element.size["width"] > 10 and captcha_element.size["height"] > 10
             )
+
+            print("✅ CAPTCHA détecté :", captcha_element.is_displayed())  # 🔥 Debug : Vérifie que l’élément est trouvé
 
             # Capturer le CAPTCHA
             captcha_bytes = captcha_element.screenshot_as_png
@@ -157,8 +172,7 @@ class CaptchaAutomation:
 
 
 if __name__ == "__main__":
-    #URL = "https://captcha.com/demos/features/captcha-demo.aspx"
+    # URL du site où est le CAPTCHA
     URL = "http://localhost:3000"
     bot = CaptchaAutomation(URL)
     bot.solve_captcha()
-    #xxxx

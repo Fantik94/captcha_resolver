@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 import threading
 from pydantic import BaseModel
-from src.captchaSolverAutoV2 import CaptchaAutomation
+from captchaSolverAutoV2 import CaptchaAutomation
 
 # Création de l'API FastAPI
 app = FastAPI()
