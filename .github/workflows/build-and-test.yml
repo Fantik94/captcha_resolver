@@ -54,7 +54,6 @@ jobs:
         run: |
           cd api-captcha
           artillery run --output report.json tests/load-test.yml
-        env:
           
       - name: Save Artillery Logs
         uses: actions/upload-artifact@v3
