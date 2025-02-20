@@ -80,6 +80,7 @@ const CaptchaComponent = () => {
   const [captcha, setCaptcha] = useState(null);
   const [userInput, setUserInput] = useState('');
   const { notifySuccess, notifyError } = useNotification();
+  const [scriptButtonDisabled, setScriptButtonDisabled] = useState(false);
 
   const fetchCaptcha = async () => {
     try {
@@ -139,8 +140,11 @@ const CaptchaComponent = () => {
         headers: { 'Content-Type': 'application/json' }
       });
 
-      console.log('Python script output:', response.data.output);
-      notifySuccess('Script Python exécuté avec succès');
+      if (response.status === 200) {
+        setScriptButtonDisabled(true);
+        console.log('Python script output:', response.data.output);
+        notifySuccess('Script Python exécuté avec succès');
+      }
     } catch (error) {
       console.error('Error running Python script:', error);
       notifyError('Erreur lors de l\'exécution du script Python');
@@ -233,8 +237,9 @@ const CaptchaComponent = () => {
                   color="secondary"
                   onClick={handleRunPythonScript}
                   startIcon={<CodeIcon />}
+                  disabled={scriptButtonDisabled}
                 >
-                  Exécuter le Script Python
+                  {scriptButtonDisabled ? 'Script Exécuté' : 'Exécuter le Script Python'}
                 </ActionButton>
               </Box>
             </Box>

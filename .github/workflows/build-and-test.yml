@@ -66,11 +66,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20'
-
-      - name: Install Frontend Dependencies
-        working-directory: ./app-captcha
-        run: npm install
-
       - name: Run Unit Tests
         working-directory: ./app-captcha
         run: npm test
