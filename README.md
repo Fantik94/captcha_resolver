@@ -92,3 +92,21 @@ Le script Python utilise **Selenium** pour automatiser le processus de résoluti
 - Soumet la solution à l'API backend
 - Utilise une API développée avec **FastAPI** pour permettre certains appels de routes, comme cliquer sur un bouton depuis le frontend et exécuter le script automatiquement
 
+---
+
+## 🏋️ Test de Charge
+
+Un test de charge a été effectué pour mesurer les performances de l'application web.
+
+![Test de charge](teste_charge.png)
+
+[🔗 Voir le rapport détaillé du test de charge](https://app.artillery.io/share/sh_f9af46dabbb694d14cb2e97594368f74607ab1b492a0e7ea1c15b9d38de2312f)
+
+---
+
+## 🏗️ Architecture du projet
+
+Description sur l'architecture du projet.
+
+![Architecture projet](architecture.png)
+
