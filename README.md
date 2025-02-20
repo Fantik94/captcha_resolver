@@ -16,7 +16,7 @@ Le frontend et l'API sont conteneurisés avec Docker, tandis que le script Pytho
 ## 📂 Structure du Projet
 
 ```plaintext
-CAPTCHA_RESOLVER/
+captcha_solver/
 │
 ├── api-captcha/
 │   ├── Dockerfile
@@ -51,7 +51,7 @@ CAPTCHA_RESOLVER/
 #### Cloner le Dépôt :
 ```bash
 git clone <https://github.com/Fantik94/captcha_resolver>
-cd CAPTCHA_RESOLVER
+cd captcha_solver
 ```
 
 #### Construire et Lancer les Conteneurs Docker :
@@ -106,7 +106,10 @@ Un test de charge a été effectué pour mesurer les performances de l'applicati
 
 ## 🏗️ Architecture du projet
 
-Description sur l'architecture du projet.
 
 ![Architecture projet](architecture.png)
+![séquence 1](séquence.png)
+![séquence 2](séquence2.png)
+
+
 

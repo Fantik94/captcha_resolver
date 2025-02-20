@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ baba ]
+    branches: [ main ]
   pull_request:
-    branches: [ baba ]
+    branches: [ main ]
 
 jobs:
   build-and-test:
