@@ -27,7 +27,7 @@ jobs:
         
       - name: Wait for services to be ready
         run: |
-          sleep 30s
+          sleep 10s
           docker compose ps
           docker compose logs
         
@@ -56,7 +56,7 @@ jobs:
           artillery run --output report.json tests/load-test.yml
           
       - name: Save Artillery Logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: artillery-logs
           path: |
@@ -79,7 +79,7 @@ jobs:
       
       - name: Save Cypress Logs
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: cypress-logs
           path: app-captcha/cypress/logs 
