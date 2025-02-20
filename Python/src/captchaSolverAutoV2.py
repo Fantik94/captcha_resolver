@@ -1,21 +1,19 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from PIL import Image
 import time
 import os
-import cv2
-
+import requests
+import torch
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
-
 
 class CaptchaSolverSelenium:
     """Classe pour récupérer un CAPTCHA à partir d'un site web déjà ouvert."""
 
-    def __init__(self, captcha_id="captcha-img", output_folder="../data/"):
+    def __init__(self, captcha_id="captcha-img", output_folder="./data/"):
         self.captcha_id = captcha_id
         self.output_folder = output_folder
         self.driver = None
@@ -27,43 +25,48 @@ class CaptchaSolverSelenium:
         """Se connecte à Chrome déjà ouvert"""
         chrome_options = webdriver.ChromeOptions()
         chrome_options.debugger_address = "localhost:9222"  # 🔥 Se connecte à Chrome déjà ouvert
-
         self.driver = webdriver.Chrome(options=chrome_options)
 
     def capture_captcha(self):
-        """Capture et sauvegarde le CAPTCHA sans recharger la page"""
+        """Télécharge directement l’image du CAPTCHA depuis son URL"""
         try:
             if not self.driver:
                 self.connect_to_existing_chrome()
 
-            # 🔥 Se connecter à la page déjà ouverte sans la recharger
-            self.driver.execute_script("window.focus();")
+            print("📡 Selenium est bien connecté à Chrome !")
+            print(f"🔍 URL actuelle dans Selenium : {self.driver.current_url}")
 
-            # Attendre que le CAPTCHA apparaisse
+            # Récupérer l’élément du CAPTCHA
+            time.sleep(2)
             captcha_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, self.captcha_id))
             )
 
-            # Vérifier la taille de l'élément
-            WebDriverWait(self.driver, 10).until(
-                lambda d: captcha_element.size["width"] > 10 and captcha_element.size["height"] > 10
-            )
+            # Récupérer l’URL du CAPTCHA
+            captcha_url = captcha_element.get_attribute("src")
+            print(f"📌 URL du CAPTCHA : {captcha_url}")
 
-            # Capturer le CAPTCHA
-            captcha_bytes = captcha_element.screenshot_as_png
-            captcha_path = os.path.join(self.output_folder, "captcha.png")
+            if not captcha_url:
+                print("❌ Impossible de récupérer l’URL du CAPTCHA.")
+                return None
 
-            # Sauvegarder l'image
-            with open(captcha_path, "wb") as f:
-                f.write(captcha_bytes)
-
-            print(f"✅ CAPTCHA capturé et sauvegardé : {captcha_path}")
-            return captcha_path
+            # Télécharger l’image
+            response = requests.get(captcha_url, stream=True)
+            if response.status_code == 200:
+                captcha_path = os.path.join(self.output_folder, "captcha.png")
+                with open(captcha_path, "wb") as f:
+                    for chunk in response.iter_content(1024):
+                        f.write(chunk)
+                print(f"✅ CAPTCHA téléchargé et sauvegardé : {captcha_path}")
+                return captcha_path
+            else:
+                print(f"❌ Échec du téléchargement du CAPTCHA. Code HTTP : {response.status_code}")
+                return None
 
         except Exception as e:
-            print(f"❌ Erreur lors de la capture du CAPTCHA : {e}")
+            print(f"❌ Erreur lors de la récupération du CAPTCHA : {e}")
             return None
-        
+
     # Fonction pour fermer le navigateur proprement
     def close(self):
         if self.driver:
@@ -71,44 +74,37 @@ class CaptchaSolverSelenium:
 
 
 class CaptchaReaderTrOCR:
-    """Classe pour lire un CAPTCHA en utilisant TrOCR avec sélection automatique du modèle."""
+    """Classe pour lire un CAPTCHA en utilisant le modèle DunnBC22/trocr-base-printed_captcha_ocr."""
 
-    def __init__(self, data_folder="../data/"):
+    def __init__(self, data_folder="./data/"):
         self.data_folder = data_folder
-        self.model_type = self.detect_captcha_type()  # Détermine le modèle à utiliser
-        self.processor = TrOCRProcessor.from_pretrained(self.model_type, use_fast=True)
-        self.model = VisionEncoderDecoderModel.from_pretrained(self.model_type, ignore_mismatched_sizes=True)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    def detect_captcha_type(self):
-        """Détecte si un CAPTCHA est segmenté ou manuscrit."""
-        captcha_path = os.path.join(self.data_folder, "captcha.png")
-        image = cv2.imread(captcha_path, cv2.IMREAD_GRAYSCALE)
+        try:
+            self.processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-printed")#nouveau model + adapté au style de captcha
+            self.model = VisionEncoderDecoderModel.from_pretrained("microsoft/trocr-base-printed")
 
-        if image is None:
-            print("❌ Erreur : Impossible de charger l'image.")
-            return "microsoft/trocr-base-handwritten"  # Par défaut
+            self.model.to(self.device)
+            print("✅ Modèle chargé avec succès !")
+        except Exception as e:
+            print(f"❌ Erreur lors du chargement du modèle : {e}")
+            raise
 
-        # Appliquer un seuillage adaptatif
-        _, thresholded = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-        # Détecter les contours
-        contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Vérifier le nombre d’objets détectés
-        if len(contours) > 5:  
-            print("🔹 Type détecté : CAPTCHA segmenté (lettres séparées) → Utilisation de TrOCR Base")
-            return "microsoft/trocr-base-handwritten"
-        else:  
-            print("🔹 Type détecté : CAPTCHA manuscrit (bruité) → Utilisation de TrOCR Large")
-            return "microsoft/trocr-large-handwritten"
+    def preprocess_image(self, image_path):
+        """Améliore le prétraitement de l'image avant la prédiction."""
+        img = Image.open(image_path).convert("RGB")
+        img = img.resize((300, 100))  # Normalisation de la taille
+        return img
 
     def read_captcha(self):
         """Lit le CAPTCHA sauvegardé et retourne le texte détecté."""
         captcha_path = os.path.join(self.data_folder, "captcha.png")
 
         try:
-            image = Image.open(captcha_path).convert("RGB")
-            pixel_values = self.processor(images=image, return_tensors="pt").pixel_values
+            image = self.preprocess_image(captcha_path)
+            pixel_values = self.processor(images=image, return_tensors="pt").pixel_values.to(self.device)
+
+            # Génération de texte
             generated_ids = self.model.generate(pixel_values)
             text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
 
@@ -125,7 +121,7 @@ class CaptchaAutomation:
 
     def __init__(self, url):
         self.url = url
-        self.solver = CaptchaSolverSelenium(url, output_folder="../data/")
+        self.solver = CaptchaSolverSelenium(captcha_id="captcha-img", output_folder="./data/")
         self.reader = None  # Initialisé après la capture
 
     def solve_captcha(self):
@@ -136,8 +132,12 @@ class CaptchaAutomation:
             print("❌ Impossible de capturer le CAPTCHA.")
             return
 
-        # Initialiser le lecteur avec détection du modèle après la capture
-        self.reader = CaptchaReaderTrOCR(data_folder="../data/")
+        # Initialiser le lecteur
+        try:
+            self.reader = CaptchaReaderTrOCR(data_folder="./data/")
+        except Exception as e:
+            print(f"❌ Échec de l'initialisation de CaptchaReaderTrOCR : {e}")
+            return
         
         # Lecture du CAPTCHA
         captcha_text = self.reader.read_captcha()

@@ -6,3 +6,8 @@ opencv-python
 numpy
 transformers
 torch
+# tensorflow
+# keras
+# huggingface_hub
+# numpy
+# requests

@@ -1,24 +1,22 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from PIL import Image
 import time
 import os
 import cv2
-import numpy as np
+import requests
 
 from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 
 
 class CaptchaSolverSelenium:
-    """Classe pour récupérer un CAPTCHA à partir d'un site web avec Selenium."""
+    """Classe pour récupérer un CAPTCHA à partir d'un site web déjà ouvert."""
 
-    def __init__(self, url, captcha_id="captcha-img", output_folder="../data/"):
-        self.url = url
+    def __init__(self, captcha_id="captcha-img", output_folder="./data/"):
         self.captcha_id = captcha_id
         self.output_folder = output_folder
         self.driver = None
@@ -26,49 +24,60 @@ class CaptchaSolverSelenium:
         # Créer le dossier ./data/ s'il n'existe pas
         os.makedirs(self.output_folder, exist_ok=True)
 
-    def capture_captcha(self):
-        """Capture et sauvegarde le CAPTCHA dans ./data/"""
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # ✅ Mode sans interface graphique
-        chrome_options.add_argument("--no-sandbox")  # ✅ Évite les problèmes de permission dans Docker
-        chrome_options.add_argument("--disable-dev-shm-usage")  # ✅ Empêche Chrome de se bloquer par manque de mémoire
-        chrome_options.add_argument("--remote-debugging-port=9222")  # ✅ Pour debug si nécessaire
-        chrome_options.add_argument("--disable-gpu")  # ✅ Accélère l'exécution sans GPU
-        chrome_options.add_argument("--window-size=1920,1080")  # ✅ Simule un écran normal pour éviter des bugs
+    def connect_to_existing_chrome(self):
+        """Se connecte à Chrome déjà ouvert"""
+        chrome_options = webdriver.ChromeOptions()
+        chrome_options.debugger_address = "localhost:9222"  # 🔥 Se connecte à Chrome déjà ouvert
 
-        # Lancer ChromeDriver avec les options en mode headless
         self.driver = webdriver.Chrome(options=chrome_options)
-        self.driver.get(self.url)
 
+    def capture_captcha(self):
+        """Télécharge directement l’image du CAPTCHA depuis son URL"""
         try:
-            print("✅ Page chargée :", self.driver.title)  # 🔥 Debug : Vérifie que la page est bien chargée
+            if not self.driver:
+                self.connect_to_existing_chrome()
 
-            # Attendre que le CAPTCHA apparaisse
+            print("📡 Selenium est bien connecté à Chrome !")
+            print(f"🔍 URL actuelle dans Selenium : {self.driver.current_url}")
+
+            # Récupérer l’élément du CAPTCHA
+            time.sleep(2)
+            elements = self.driver.find_elements(By.ID, self.captcha_id)
+
+            if elements:
+                print(f"✅ {len(elements)} élément(s) trouvé(s) avec l'ID {self.captcha_id} !")
+            else:
+                print(f"❌ Aucun élément trouvé avec l'ID {self.captcha_id}.")
+
             captcha_element = WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, self.captcha_id))
             )
 
-            # Vérifier que l'élément a une taille correcte
-            WebDriverWait(self.driver, 10).until(
-                lambda d: captcha_element.size["width"] > 10 and captcha_element.size["height"] > 10
-            )
+            # Récupérer l’URL du CAPTCHA
+            captcha_url = captcha_element.get_attribute("src")
+            print(f"📌 URL du CAPTCHA : {captcha_url}")
 
-            print("✅ CAPTCHA détecté :", captcha_element.is_displayed())  # 🔥 Debug : Vérifie que l’élément est trouvé
+            if not captcha_url:
+                print("❌ Impossible de récupérer l’URL du CAPTCHA.")
+                return None
 
-            # Capturer le CAPTCHA
-            captcha_bytes = captcha_element.screenshot_as_png
-            captcha_path = os.path.join(self.output_folder, "captcha.png")
-
-            # Sauvegarder l'image
-            with open(captcha_path, "wb") as f:
-                f.write(captcha_bytes)
-
-            print(f"✅ CAPTCHA capturé et sauvegardé : {captcha_path}")
-            return captcha_path
+            # Télécharger l’image
+            response = requests.get(captcha_url, stream=True)
+            if response.status_code == 200:
+                captcha_path = os.path.join(self.output_folder, "captcha.png")
+                with open(captcha_path, "wb") as f:
+                    for chunk in response.iter_content(1024):
+                        f.write(chunk)
+                print(f"✅ CAPTCHA téléchargé et sauvegardé : {captcha_path}")
+                return captcha_path
+            else:
+                print(f"❌ Échec du téléchargement du CAPTCHA. Code HTTP : {response.status_code}")
+                return None
 
         except Exception as e:
-            print(f"❌ Erreur lors de la capture du CAPTCHA : {e}")
+            print(f"❌ Erreur lors de la récupération du CAPTCHA : {e}")
             return None
+
         
     # Fonction pour fermer le navigateur proprement
     def close(self):
@@ -79,7 +88,7 @@ class CaptchaSolverSelenium:
 class CaptchaReaderTrOCR:
     """Classe pour lire un CAPTCHA en utilisant TrOCR avec sélection automatique du modèle."""
 
-    def __init__(self, data_folder="../data/"):
+    def __init__(self, data_folder="./data/"):
         self.data_folder = data_folder
         self.model_type = self.detect_captcha_type()  # Détermine le modèle à utiliser
         self.processor = TrOCRProcessor.from_pretrained(self.model_type, use_fast=True)
@@ -131,7 +140,7 @@ class CaptchaAutomation:
 
     def __init__(self, url):
         self.url = url
-        self.solver = CaptchaSolverSelenium(url, output_folder="../data/")
+        self.solver = CaptchaSolverSelenium(captcha_id="captcha-img", output_folder="./data/")
         self.reader = None  # Initialisé après la capture
 
     def solve_captcha(self):
@@ -143,7 +152,7 @@ class CaptchaAutomation:
             return
 
         # Initialiser le lecteur avec détection du modèle après la capture
-        self.reader = CaptchaReaderTrOCR(data_folder="../data/")
+        self.reader = CaptchaReaderTrOCR(data_folder="./data/")
         
         # Lecture du CAPTCHA
         captcha_text = self.reader.read_captcha()
@@ -171,8 +180,7 @@ class CaptchaAutomation:
             self.solver.close()
 
 
-if __name__ == "__main__":
-    # URL du site où est le CAPTCHA
-    URL = "http://localhost:3000"
-    bot = CaptchaAutomation(URL)
-    bot.solve_captcha()
+# if __name__ == "__main__":
+    # URL = "http://localhost:3000"
+    # bot = CaptchaAutomation(URL)
+    # bot.solve_captcha()
