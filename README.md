@@ -32,9 +32,10 @@ captcha_solver/
 │   │   │   ├── ... (autres fichiers de composants)
 │   │   ├── ... (autres fichiers frontend)
 │
-├── python-script/
-│   ├── captcha_solver.py
-│   ├── ... (autres fichiers Python)
+├── Python/
+│   ├── src/
+│       │──captchaSolverAutoV2.py
+│       ├── ... (autres fichiers Python)
 │
 ├── docker-compose.yml
 │
@@ -65,7 +66,6 @@ cd Python/src
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
----
 
 ## 🐳 Configuration Docker Compose
 Le fichier `docker-compose.yml` définit les services pour la base de données **MySQL**, **phpMyAdmin**, l'**API**, et le **frontend**.
@@ -107,7 +107,7 @@ Un test de charge a été effectué pour mesurer les performances de l'applicati
 ## 🏗️ Architecture du projet
 
 
-![Architecture projet](architecture.png)
+![Architecture projet](archi.png)
 ![séquence 1](séquence.png)
 ![séquence 2](séquence2.png)
 
