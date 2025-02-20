@@ -18,6 +18,9 @@ RUN npm run build
 # Utiliser une image Nginx pour servir l'application
 FROM nginx:alpine
 
+# Copier la configuration Nginx personnalisée
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Copier les fichiers de build dans le répertoire de Nginx
 COPY --from=build /app/dist /usr/share/nginx/html
 
