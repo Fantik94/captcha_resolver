@@ -1,0 +1,77 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ baba ]
+  pull_request:
+    branches: [ baba ]
+
+jobs:
+  setup-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build and start services
+        run: |
+          docker-compose build
+          docker-compose up -d
+        
+      - name: Wait for services to be ready
+        run: |
+          sleep 30s
+          docker-compose ps
+          docker-compose logs
+        
+      - name: Check service health
+        run: |
+          curl -f http://localhost:3000 || exit 1
+          curl -f http://localhost:3001/api/captcha || exit 1
+
+  artillery-test:
+    needs: setup-and-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          
+      - name: Install Artillery
+        run: npm install -g artillery
+        
+      - name: Run Artillery Tests
+        run: |
+          cd api-captcha
+          artillery run --output report.json tests/load-test.yml
+          
+      - name: Save Artillery Logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: artillery-logs
+          path: |
+            api-captcha/report.json
+            api-captcha/artillery.log
+
+  cypress-test:
+    needs: setup-and-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Run Cypress Tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ./app-captcha
+          wait-on: 'http://localhost:3000'
+          browser: chrome
+          record: false
+      
+      - name: Save Cypress Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: cypress-logs
+          path: app-captcha/cypress/logs 
