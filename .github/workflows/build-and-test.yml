@@ -30,6 +30,8 @@ jobs:
           sleep 10s
           docker compose ps
           docker compose logs
+
+
         
       - name: Check service health
         run: |
@@ -50,14 +52,6 @@ jobs:
           cd api-captcha
           artillery run --output report.json tests/load-test.yml
           
-      - name: Save Artillery Logs
-        uses: actions/upload-artifact@v4
-        with:
-          name: artillery-logs
-          path: |
-            api-captcha/report.json
-            api-captcha/artillery.log
-
       # Cypress Tests
       - name: Run Cypress Tests
         uses: cypress-io/github-action@v6
@@ -66,23 +60,18 @@ jobs:
           wait-on: 'http://localhost:3000'
           browser: chrome
           record: false
-      
-      - name: Save Cypress Logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-logs
-          path: app-captcha/cypress/logs
 
-      # Capture final logs
-      - name: Capture Final Docker Logs
-        if: always()
-        run: |
-          docker compose logs > docker-compose-logs.txt
-        
-      - name: Save Docker Logs
-        if: always()
-        uses: actions/upload-artifact@v4
+
+      - name: Setup Node.js for Unit Tests
+        uses: actions/setup-node@v3
         with:
-          name: docker-logs
-          path: docker-compose-logs.txt 
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
+        working-directory: ./app-captcha
+        run: npm install
+
+      - name: Run Unit Tests
+        working-directory: ./app-captcha
+        run: npm test
+      
