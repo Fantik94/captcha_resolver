@@ -4,7 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "nodemon src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test:load:cloud": "artillery run --record --key a9_G-WJSM8N9ff-gmkNjgCVeIe_7bPKa9og tests/load-test.yml"
+
   },
   "keywords": [],
   "author": "",
