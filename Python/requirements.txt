@@ -6,6 +6,7 @@ opencv-python
 numpy
 transformers
 torch
+re
 # tensorflow
 # keras
 # huggingface_hub
